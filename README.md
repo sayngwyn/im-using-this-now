@@ -60,6 +60,13 @@ Post in the Nexus page's Bugs tab with your game version and what you saw, or fi
 
 ---
 
+**Credits**
+
+- **SKSE team** for SKSE.
+- **meh321** for Address Library for SKSE Plugins.
+- **CommonLibSSE-NG** for the library it's built on (Ryan-rsm-McKenzie, CharmedBaryon, alandtse and contributors).
+- **SkyUI team** for SkyUI and its mod menu.
+
 Made with AI. Claude contributed heavily under my direction: I decided what it does and checked it, and the AI wrote most of the code, its tests and these docs.
 
 ## Licence
