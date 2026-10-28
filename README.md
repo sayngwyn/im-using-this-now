@@ -36,7 +36,7 @@ In MCM, open **I'm Using This Now**. Changes apply at once and hold for every sa
 - **Take over busy stations:** on or off. Off is the base game.
 - **Followers step away too:** on, your followers give up a station for you like anyone else; off, they keep using it.
 - **Wait for the NPC to get up:** 1 to 60 seconds (10 by default). If they haven't got up by then, the station stays theirs.
-- **The message:** in the ini. `{name}` becomes the NPC's name.
+- **Your own message:** write any line you like in the ini (`sMessage`). `{name}` becomes the NPC's name.
 
 <p align="center"><img alt="The mod's MCM page: take over busy stations, followers step away too, and the wait time" src="docs/screenshots/mcm-page.png"><br><sub><i>The MCM page: turn it off, leave followers alone, or change how long to wait for the NPC.</i></sub></p>
 
