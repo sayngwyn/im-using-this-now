@@ -1,0 +1,12 @@
+build/
+.xmake/
+vcpkg_installed/
+test-env/
+dist/build/
+dist/work/
+*.log
+build-test/
+mcm/build/
+mcm/deps/
+/screenshots/
+dist/nexus-upload/

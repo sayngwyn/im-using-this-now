@@ -1,0 +1,7 @@
+{"out": "dist/nexus-upload/header.png",
+ "title": "I'm Using This Now",
+ "eyebrow": "SKYRIM MOD", "tagline": "Crafting station occupied?\nKick them off!",
+ "cards_area": [732, 26, 528, 250],
+ "cards": [
+  {"image": "screenshots/1-vanilla-grindstone.png"},
+  {"image": "screenshots/2-mod-grindstone.png"}]}

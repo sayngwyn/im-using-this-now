@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<fomod>
+	<Name>I'm Using This Now</Name>
+	<Author>sayngwyn</Author>
+	<Version>1.0.0</Version>
+	<Description>Activate a crafting station an NPC is using and it's yours on the first click: they step away and you start crafting. Set it in MCM or in the ini.</Description>
+	<Groups>
+		<element>Gameplay</element>
+	</Groups>
+</fomod>

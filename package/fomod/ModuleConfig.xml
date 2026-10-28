@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://qconsulting.ca/fo3/ModConfig5.0.xsd">
+	<moduleName>I'm Using This Now</moduleName>
+	<requiredInstallFiles>
+		<folder source="00 Core" destination="" />
+	</requiredInstallFiles>
+	<installSteps order="Explicit">
+		<installStep name="Settings">
+			<optionalFileGroups order="Explicit">
+				<group name="How do you want to change the settings?" type="SelectExactlyOne">
+					<plugins order="Explicit">
+						<plugin name="In game, with an MCM menu (needs SkyUI)">
+							<description>Adds a page under Mod Configuration: turn the mod on or off, choose whether followers step away too, and how long to wait for the NPC to get up. Changes apply at once and hold for every save. Adds a small ESL-flagged plugin that takes no load order slot. The message text is still changed in the ini.</description>
+							<files>
+								<folder source="10 MCM" destination="" />
+							</files>
+							<typeDescriptor>
+								<dependencyType>
+									<defaultType name="Optional" />
+									<patterns>
+										<pattern>
+											<dependencies operator="And">
+												<fileDependency file="SkyUI_SE.esp" state="Active" />
+											</dependencies>
+											<type name="Recommended" />
+										</pattern>
+									</patterns>
+								</dependencyType>
+							</typeDescriptor>
+						</plugin>
+						<plugin name="Ini only (no plugin)">
+							<description>No plugin and no SkyUI needed. Change the settings in Data\SKSE\Plugins\ImUsingThisNow.ini; changes apply the next time you start the game.</description>
+							<typeDescriptor>
+								<dependencyType>
+									<defaultType name="Recommended" />
+									<patterns>
+										<pattern>
+											<dependencies operator="And">
+												<fileDependency file="SkyUI_SE.esp" state="Active" />
+											</dependencies>
+											<type name="Optional" />
+										</pattern>
+									</patterns>
+								</dependencyType>
+							</typeDescriptor>
+						</plugin>
+					</plugins>
+				</group>
+			</optionalFileGroups>
+		</installStep>
+	</installSteps>
+</config>

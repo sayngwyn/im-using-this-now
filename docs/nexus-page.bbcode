@@ -1,0 +1,57 @@
+[size=4]Click a crafting station an NPC is using and it's yours on the first click: they step away and the crafting menu opens. No more "Someone else is using this." and a second click.[/size]
+
+[img]{IMG:strip-how-it-works}[/img]
+
+[list]
+[*][b]One click.[/b] Forge, workbench, grindstone, tanning rack, alchemy lab, enchanter: if an NPC is using it, they get up and the menu opens for you as soon as the station is free, usually within two to four seconds.
+[*][b]You say so.[/b] Instead of "Someone else is using this." you see "I'm using this now. Get lost, Adrianne Avenicci." with whoever you just moved along.
+[*][b]Busy NPCs keep their station.[/b] Anyone in a scene, a conversation or combat, or doing quest work, is left alone, and you get the game's usual message.
+[*][b]Then life goes on.[/b] When you leave, the NPC goes back to work, as they would in the base game.
+[/list]
+
+[img]{IMG:get-lost-line}[/img]
+[size=2][i][color=#8a7f80]The line you see on your first click, instead of the game's "Someone else is using this."[/color][/i][/size]
+
+[img]{IMG:crafting-menu}[/img]
+[size=2][i][color=#8a7f80]The same click opens the smithing menu while Adrianne stands aside, with no second try.[/color][/i][/size]
+
+[img]{IMG:strip-install}[/img]
+
+[list=1]
+[*]Install with your mod manager.
+[*]The installer asks how you want to change the settings: in an MCM menu, or in an ini file with no plugin at all. If you have SkyUI, the menu is already picked.
+[/list]
+
+[b]Needs:[/b] SKSE, Address Library for SKSE Plugins, and the Microsoft Visual C++ 2015-2022 redistributable (x64). SkyUI for the menu.
+[b]Tested on:[/b] [b][color=#f0c25a]SE[/color][/b] (1.5.97) · [b][color=#ff6b61]AE[/color][/b] (1.6.640, 1.6.1170 and 1.7.104)
+
+[img]{IMG:strip-choose-what-it-does}[/img]
+
+In MCM, open [b]I'm Using This Now[/b]. Changes apply at once and hold for every save. Without MCM, edit [b]Data\SKSE\Plugins\ImUsingThisNow.ini[/b].
+
+[list]
+[*][b]Take over busy stations:[/b] on or off. Off is the base game.
+[*][b]Followers step away too:[/b] on, your followers give up a station for you like anyone else; off, they keep using it.
+[*][b]Wait for the NPC to get up:[/b] 1 to 60 seconds (10 by default). If they haven't got up by then, the station stays theirs.
+[*][b]The message:[/b] in the ini. {name} becomes the NPC's name.
+[/list]
+
+[img]{IMG:mcm-page}[/img]
+[size=2][i][color=#8a7f80]The MCM page: turn it off, leave followers alone, or change how long to wait for the NPC.[/color][/i][/size]
+
+[img]{IMG:strip-good-to-know}[/img]
+
+[list]
+[*]After an NPC gets up, they wait beside the station until you're done, so you may stand close together for a moment. The base game does the same when you take a free station an NPC wants.
+[*]The ini-only choice adds no plugin, so it can be added or removed at any time. The MCM choice adds one ESL-flagged plugin that takes no load order slot.
+[*]No scripts run in the background. The MCM choice only has the menu's own script.
+[/list]
+
+{BLOCK:MORE_BY}
+[img]{IMG:divider}[/img]
+
+{SOURCE}
+
+[b]Made with AI.[/b] Claude contributed heavily under my direction: I decided what it does and checked it, and the AI wrote most of the code.
+
+Got feedback? Post in [b]Bugs[/b] with your game version and what you saw, or find me on [url=https://discord.gg/QZHymBYMxP]Discord[/url].

@@ -1,0 +1,5 @@
+{"out": "dist/nexus-upload/primary.png",
+ "name": "I'm Using This Now", "line": "Crafting station occupied?\nKick them off!", "eyebrow": "SKYRIM MOD", "size": [3840, 2160], "cards_area": [0.47, 0.34, 0.48, 0.3],
+ "cards": [
+  {"image": "dist/nexus-upload/vanilla-line.png", "max_scale": 1.8},
+  {"image": "dist/nexus-upload/get-lost-line.png", "max_scale": 2.2}]}

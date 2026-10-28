@@ -1,0 +1,3 @@
+[b]Game version:[/b] [b][color=#f0c25a]SE[/color][/b] · [b][color=#ff6b61]AE[/color][/b] (one file covers both)
+Requires SKSE, Address Library and the VC++ 2015-2022 redistributable.
+MCM optional: needs SkyUI, and the installer picks it if you have it.
