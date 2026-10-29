@@ -56,7 +56,7 @@ In MCM, open **I'm Using This Now**. Changes apply at once and hold for every sa
 
 ## Report a problem
 
-Post in the Nexus page's Bugs tab with your game version and what you saw, or find me on [Discord](https://discord.gg/QZHymBYMxP). The log is `Documents\My Games\Skyrim Special Edition\SKSE\ImUsingThisNow.log`.
+Post in the Nexus page's Bugs tab with your game version and what you saw, or find me on [Discord](https://discord.com/invite/sayngwyn). The log is `Documents\My Games\Skyrim Special Edition\SKSE\ImUsingThisNow.log`.
 
 ---
 
