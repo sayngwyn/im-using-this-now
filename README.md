@@ -66,6 +66,7 @@ Post in the Nexus page's Bugs tab with your game version, what you saw, this mod
 - **meh321** for Address Library for SKSE Plugins.
 - **CommonLibSSE-NG** for the library it's built on (Ryan-rsm-McKenzie, CharmedBaryon, alandtse and contributors).
 - **SkyUI team** for SkyUI and its mod menu.
+- **[tazzap20](https://www.nexusmods.com/profile/tazzap20)** for suggesting ore veins.
 
 Made with AI. Claude contributed heavily under my direction: I decided what it does and checked it, and the AI wrote most of the code, its tests and these docs.
 
