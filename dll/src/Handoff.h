@@ -7,6 +7,7 @@ namespace Handoff
 {
 	void Install();         // hooks; call from SKSEPlugin_Load
 	void OnDataLoaded();    // reads the game's "in use" texts; call at kDataLoaded
+	void OnGameEvent(std::uint32_t a_type);  // kSaveGame / kPreLoadGame / kNewGame: lets a held NPC go, ends any hand-off
 
 	RE::Actor* FindOccupant(RE::TESObjectREFR* a_furniture);
 	bool       IsCraftingStation(RE::TESObjectREFR* a_ref);
@@ -15,5 +16,8 @@ namespace Handoff
 	void       LogActor(const char* a_label, RE::Actor* a_actor);
 #ifdef IUTN_SELFTEST
 	void       TestClearInUseTexts();  // test build only: pretend the game's texts weren't found
+	RE::Actor* TestHeldNpc();                 // the NPC held still right now, if any
+	bool       TestPending();                 // a hand-off is running
+	void       TestSetHoldDelay(float a_seconds);  // stay held this long before the player's activation
 #endif
 }

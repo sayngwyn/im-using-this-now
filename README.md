@@ -2,7 +2,7 @@
 <img alt="I'm Using This Now, a Skyrim mod" src="docs/header.png">
 </p>
 
-Click a crafting station an NPC is using and it's yours on the first click: they step away and the crafting menu opens. No more "Someone else is using this." and a second click.
+Click a crafting station, ore vein or chopping block an NPC is using and it's yours on the first click: they step away and you get to work. No more "Someone else is using this." and a second click.
 
 <p align="center"><picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/divider.png">
@@ -13,7 +13,7 @@ Click a crafting station an NPC is using and it's yours on the first click: they
 
 - **One click.** Forge, workbench, grindstone, tanning rack, alchemy lab, enchanter: if an NPC is using it, they get up and the menu opens for you as soon as the station is free, usually within two to four seconds.
 - **You say so.** Instead of "Someone else is using this." you see "I'm using this now. Get lost, Adrianne Avenicci." with whoever you just moved along.
-- **Busy NPCs keep their station.** Anyone in a scene, a conversation or combat, or doing quest work, is left alone, and you get the game's usual message.
+- **Busy NPCs keep their spot.** Anyone in a scene, a conversation or combat, or doing quest work, is left alone, and you get the game's usual message.
 - **Then life goes on.** When you leave, the NPC goes back to work, as they would in the base game.
 
 <p align="center"><img alt="The game's message line reading: I'm using this now. Get lost, Adrianne Avenicci." src="docs/screenshots/get-lost-line.png"><br><sub><i>The line you see on your first click, instead of the game's "Someone else is using this."</i></sub></p>

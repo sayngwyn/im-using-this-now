@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.1.0
+
+The first-click takeover now works on more than crafting stations.
+
+- Ore veins: click a vein a miner is working and they step off at once, then you mine it yourself on that same click.
+- Wood chopping blocks: click one a woodcutter is using and they step off, then you chop.
+- The same rules as before: anyone in a scene, a conversation, combat or quest work keeps their spot, and your "Get lost" line replaces the game's "Someone else is using this."
+- Clay and quarry spots are covered by the same rule, but untested, because no NPC uses them in the base game.
+- The log says what happened in each case, including when an NPC is stuck stepping off.
+- Needs a pickaxe or axe in your bag, as the game always has.
+- Tested on 1.5.97, 1.6.640, 1.6.1170 and 1.7.104, for both ore veins and chopping blocks.
+- Known: if a miner has only booked a vein and is still walking to it, the mod leaves it alone and the game seats you without paying ore, as it does without the mod. Click again once they are on it.
+
 ## 1.0.1
 
 A better log, so a bug report can be worked out from one file. No change to what the mod does.

@@ -11,6 +11,15 @@ namespace
 {
 	void OnMessage(SKSE::MessagingInterface::Message* a_msg)
 	{
+		switch (a_msg->type) {
+		case SKSE::MessagingInterface::kSaveGame:  // sent before the save is written
+		case SKSE::MessagingInterface::kPreLoadGame:
+		case SKSE::MessagingInterface::kNewGame:
+			Handoff::OnGameEvent(a_msg->type);
+			break;
+		default:
+			break;
+		}
 		if (a_msg->type == SKSE::MessagingInterface::kDataLoaded) {
 			Handoff::OnDataLoaded();
 #ifdef IUTN_SELFTEST
