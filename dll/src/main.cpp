@@ -2,6 +2,7 @@
 #include "pch.h"
 
 #include "Handoff.h"
+#include "Log.h"
 #include "Papyrus.h"
 #include "SelfTest.h"
 #include "Settings.h"
@@ -23,17 +24,22 @@ SKSE_PLUGIN_LOAD(const SKSE::LoadInterface* a_skse)
 {
 	SKSE::Init(a_skse);
 
-	Settings::Get().Load();
-	Handoff::Install();
-	Papyrus::Install();
-	SKSE::GetMessagingInterface()->RegisterListener(OnMessage);
-
-	logs::info("I'm Using This Now loaded, game {}{}", a_skse->RuntimeVersion().string(),
+	logs::info("I'm Using This Now {} loaded, game {}{}",
+		SKSE::PluginDeclaration::GetSingleton()->GetVersion().string("."), a_skse->RuntimeVersion().string(),
 #ifdef IUTN_SELFTEST
 		" (SELF-TEST BUILD)"
 #else
 		""
 #endif
 	);
+	Settings::Get().Load();
+	try {
+		Handoff::Install();
+	} catch (const std::exception& e) {
+		Log::Problem("Hook install threw: {}", e.what());
+		return false;
+	}
+	Papyrus::Install();
+	SKSE::GetMessagingInterface()->RegisterListener(OnMessage);
 	return true;
 }

@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Handoff.h"
+#include "Log.h"
 #include "Settings.h"
 
 namespace Handoff
@@ -26,36 +27,54 @@ namespace Handoff
 		std::mutex  g_messageLock;
 		std::string g_message;
 		float       g_messageWindow = 0.0f;
+		bool        g_swapExpected = false;  // a swap was prepared and hasn't happened yet
+		bool        g_loggedMenuWait = false;
+		bool        g_ownActivation = false;  // the mod's own activation for the player is running
 
 		constexpr float kMaxPlayerDistance = 400.0f;  // ~5.7 m; activation reach is ~150-200
 
 		bool IsPlayer(const RE::TESObjectREFR* a_ref) { return a_ref && a_ref->IsPlayerRef(); }
 	}
 
-	// NPCs the mod leaves alone: the click then behaves exactly as vanilla.
-	bool IsEligible(RE::Actor* a_npc)
+	// Why the mod leaves this NPC alone (the click then behaves exactly as
+	// vanilla), or nullptr if it takes the station.
+	const char* WhyNot(RE::Actor* a_npc)
 	{
-		if (!a_npc || a_npc->IsPlayerRef() || a_npc->IsDead() || a_npc->IsInCombat()) {
-			return false;
+		if (!a_npc) {
+			return "no NPC";
+		}
+		if (a_npc->IsPlayerRef()) {
+			return "it is the player";
+		}
+		if (a_npc->IsDead()) {
+			return "NPC is dead";
+		}
+		if (a_npc->IsInCombat()) {
+			return "NPC is in combat";
 		}
 		if (a_npc->GetCurrentScene()) {
-			return false;
+			return "NPC is in a scene";
 		}
 		if (const auto topics = RE::MenuTopicManager::GetSingleton(); topics && topics->speaker == a_npc->GetHandle()) {
-			return false;
+			return "NPC is talking to the player";
 		}
 		if (const auto pkg = a_npc->GetCurrentPackage()) {
 			using T = RE::PACKAGE_TYPE;
 			const auto type = pkg->packData.packType.get();
-			if (type == T::kDialogue || type == T::kInGameDialogue || pkg->ownerQuest) {
-				return false;
+			if (type == T::kDialogue || type == T::kInGameDialogue) {
+				return "NPC is in a dialogue package";
+			}
+			if (pkg->ownerQuest) {
+				return "NPC is doing quest work";
 			}
 		}
 		if (!Settings::Get().includeFollowers && a_npc->IsPlayerTeammate()) {
-			return false;
+			return "NPC is a follower and followers are set to keep their station";
 		}
-		return true;
+		return nullptr;
 	}
+
+	bool IsEligible(RE::Actor* a_npc) { return !WhyNot(a_npc); }
 
 	namespace
 	{
@@ -78,23 +97,9 @@ namespace Handoff
 			static bool thunk(RE::TESFurniture* a_this, RE::TESObjectREFR* a_target, RE::TESObjectREFR* a_activator,
 				std::uint8_t a_arg3, RE::TESBoundObject* a_object, std::int32_t a_count)
 			{
-				if (Settings::Get().enabled && a_target && IsPlayer(a_activator) && !g_pending &&
+				if (a_target && IsPlayer(a_activator) &&
 					a_this->workBenchData.benchType.get() != RE::TESFurniture::WorkBenchData::BenchType::kNone) {
-					if (const auto npc = FindOccupant(a_target)) {
-						const bool eligible = IsEligible(npc);
-						logs::info("Player activated {:08X} '{}' used by {:08X} '{}': {}", a_target->GetFormID(),
-							a_this->GetName(), npc->GetFormID(), npc->GetDisplayFullName(),
-							eligible ? "taking over" : "left alone (vanilla)");
-#ifdef IUTN_SELFTEST
-						LogActor("occupant", npc);
-#endif
-						if (eligible) {
-							g_pending = Pending{ a_target->GetHandle(), npc->GetHandle() };
-							std::scoped_lock lock(g_messageLock);
-							g_message = MakeMessage(npc);
-							g_messageWindow = 2.0f;
-						}
-					}
+					Decide(a_this, a_target);
 				}
 #ifdef IUTN_SELFTEST
 				else if (a_target && a_activator && !IsPlayer(a_activator)) {
@@ -103,6 +108,40 @@ namespace Handoff
 				}
 #endif
 				return func(a_this, a_target, a_activator, a_arg3, a_object, a_count);
+			}
+
+			// The player clicked a crafting station: log what was decided and why.
+			static void Decide(RE::TESFurniture* a_this, RE::TESObjectREFR* a_target)
+			{
+				if (g_ownActivation) {
+					return;  // the mod's own hand-off activation; already logged
+				}
+				const auto id = a_target->GetFormID();
+				const auto name = a_this->GetName();
+				if (!Settings::Get().enabled) {
+					Log::Event("Player clicked {:08X} '{}': mod is switched off in the settings, left alone (vanilla)", id, name);
+					return;
+				}
+				if (g_pending) {
+					Log::Event("Player clicked {:08X} '{}' while a hand-off is already running: ignored", id, name);
+					return;
+				}
+				const auto npc = FindOccupant(a_target);
+				if (!npc) {
+					Log::Event("Player clicked {:08X} '{}': nobody is using it, nothing to do", id, name);
+					return;
+				}
+				const char* why = WhyNot(npc);
+				Log::Event("Player clicked {:08X} '{}' used by {:08X} '{}': {}", id, name, npc->GetFormID(),
+					npc->GetDisplayFullName(), why ? "left alone (vanilla)" : "taking over");
+				LogActor(why ? why : "occupant", npc);
+				if (!why) {
+					g_pending = Pending{ a_target->GetHandle(), npc->GetHandle() };
+					std::scoped_lock lock(g_messageLock);
+					g_message = MakeMessage(npc);
+					g_messageWindow = 2.0f;
+					g_swapExpected = true;
+				}
 			}
 			static inline REL::Relocation<decltype(thunk)> func;
 		};
@@ -115,7 +154,13 @@ namespace Handoff
 				func(a_player, a_delta);
 				{
 					std::scoped_lock lock(g_messageLock);
-					g_messageWindow = (std::max)(0.0f, g_messageWindow - a_delta);
+					if (g_messageWindow > 0.0f) {
+						g_messageWindow = (std::max)(0.0f, g_messageWindow - a_delta);
+						if (g_messageWindow == 0.0f && g_swapExpected) {
+							g_swapExpected = false;
+							Log::Event("Message not swapped: the game's 'in use' text never showed in the 2 s after the click");
+						}
+					}
 				}
 				if (g_pending) {
 					Tick(a_player, a_delta);
@@ -140,18 +185,30 @@ namespace Handoff
 				} else if (a_player->GetPosition().GetDistance(furniture->GetPosition()) > kMaxPlayerDistance) {
 					stop = "player walked away";
 				} else if (const auto ui = RE::UI::GetSingleton(); ui && ui->GameIsPaused()) {
+					if (!g_loggedMenuWait) {
+						g_loggedMenuWait = true;
+						Log::Event("Hand-off waiting: a menu is open ({:.2f}s in)", p.elapsed);
+					}
 					return;  // a menu is open: wait, don't count it as failure
 				} else if (const auto occupant = FindOccupant(furniture.get()); occupant && occupant != npc.get()) {
 					stop = "someone else took it";
 				} else if (!occupant) {
-					logs::info("Station free after {:.2f}s; using it for the player", p.elapsed);
+					Log::Event("Station free after {:.2f}s; using it for the player", p.elapsed);
 					g_pending.reset();
-					furniture->ActivateRef(a_player, 0, nullptr, 1, false);
+					g_loggedMenuWait = false;
+					g_ownActivation = true;
+					const bool ok = furniture->ActivateRef(a_player, 0, nullptr, 1, false);
+					g_ownActivation = false;
+					Log::Event("Activation for the player {}", ok ? "went through" : "was refused by the game");
 					return;
 				}
 				if (stop) {
-					logs::info("Hand-off stopped: {}", stop);
+					Log::Event("Hand-off stopped after {:.2f}s (wait limit {:g}s): {}", p.elapsed, Settings::Get().maxWaitSeconds, stop);
+					if (npc && std::string_view(stop) == "NPC didn't get up in time") {
+						LogActor("NPC still on the station", npc.get());
+					}
 					g_pending.reset();
+					g_loggedMenuWait = false;
 				}
 			}
 			static inline REL::Relocation<decltype(thunk)> func;
@@ -164,14 +221,17 @@ namespace Handoff
 			{
 				if (const auto data = a_message.data ? skyrim_cast<RE::HUDData*>(a_message.data) : nullptr;
 					data && data->type.get() == RE::HUD_MESSAGE_TYPE::kNotification) {
-#ifdef IUTN_SELFTEST
-					logs::info("HUD notification: '{}'", data->text.c_str());
-#endif
 					std::scoped_lock lock(g_messageLock);
-					if (g_messageWindow > 0.0f && IsVanillaInUse(data->text.c_str())) {
-						data->text = g_message.c_str();
-						g_messageWindow = 0.0f;
-						logs::info("Message swapped: '{}'", g_message);
+					if (g_messageWindow > 0.0f) {
+						if (IsVanillaInUse(data->text.c_str())) {
+							Log::Event("Message swapped: '{}' -> '{}'", data->text.c_str(), g_message);
+							data->text = g_message.c_str();
+							g_messageWindow = 0.0f;
+							g_swapExpected = false;
+						} else {
+							g_swapExpected = false;
+						Log::Event("Message not swapped: the notification '{}' is not one of the game's 'in use' texts listed at load", data->text.c_str());
+						}
 					}
 				}
 				return func(a_this, a_message);
@@ -212,18 +272,22 @@ namespace Handoff
 	void LogActor(const char* a_label, RE::Actor* a_actor)
 	{
 		if (!a_actor) {
-			logs::info("  {}: none", a_label);
+			Log::Event("  {}: none", a_label);
 			return;
 		}
 		const auto pkg = a_actor->GetCurrentPackage();
 		const auto state = a_actor->AsActorState();
-		logs::info("  {}: {:08X} '{}' sit={} pkg={:08X} type={} quest={:08X} scene={:08X}",
+		Log::Event("  {}: {:08X} '{}' sit={} pkg={:08X} type={} quest={:08X} scene={:08X}",
 			a_label, a_actor->GetFormID(), a_actor->GetDisplayFullName(),
 			state ? std::to_underlying(state->GetSitSleepState()) : -1,
 			pkg ? pkg->GetFormID() : 0, pkg ? std::to_underlying(pkg->packData.packType.get()) : -1,
 			pkg && pkg->ownerQuest ? pkg->ownerQuest->GetFormID() : 0,
 			a_actor->GetCurrentScene() ? a_actor->GetCurrentScene()->GetFormID() : 0);
 	}
+
+#ifdef IUTN_SELFTEST
+	void TestClearInUseTexts() { g_inUseTexts.clear(); }
+#endif
 
 	void Install()
 	{
@@ -235,6 +299,14 @@ namespace Handoff
 
 		REL::Relocation<std::uintptr_t> hud{ RE::VTABLE_HUDMenu[0] };
 		HUDProcessMessage::func = hud.write_vfunc(0x04, HUDProcessMessage::thunk);
+
+		const bool ok = FurnitureActivate::func.address() && PlayerUpdate::func.address() && HUDProcessMessage::func.address();
+		if (ok) {
+			logs::info("Hooks installed: station activation, player update, HUD notifications");
+		} else {
+			Log::Problem("Hook install FAILED (activation={} update={} hud={}): the mod will not work",
+				FurnitureActivate::func.address() != 0, PlayerUpdate::func.address() != 0, HUDProcessMessage::func.address() != 0);
+		}
 	}
 
 	void OnDataLoaded()
@@ -256,6 +328,9 @@ namespace Handoff
 					logs::info("In-use text {}: '{}'", name, setting->GetString());
 				}
 			}
+		}
+		if (g_inUseTexts.empty()) {
+			Log::Problem("No 'in use' texts found in the game settings: the message swap will never happen");
 		}
 	}
 }

@@ -39,9 +39,17 @@ namespace
 
 void Settings::Load()
 {
-	const auto ini = IniPath().wstring();
+	const auto iniPath = IniPath();
+	const auto ini = iniPath.wstring();
+	if (!std::filesystem::exists(iniPath)) {
+		logs::warn("Settings file not found next to the DLL ({}): using the defaults", iniPath.filename().string());
+	}
 	enabled = GetPrivateProfileIntW(L"General", L"bEnabled", enabled, ini.c_str()) != 0;
-	maxWaitSeconds = std::clamp(ReadFloat(L"General", L"fMaxWaitSeconds", maxWaitSeconds, ini), 1.0f, 60.0f);
+	const float rawWait = ReadFloat(L"General", L"fMaxWaitSeconds", maxWaitSeconds, ini);
+	maxWaitSeconds = std::clamp(rawWait, 1.0f, 60.0f);
+	if (maxWaitSeconds != rawWait) {
+		logs::warn("fMaxWaitSeconds={} is outside 1 to 60: using {}", rawWait, maxWaitSeconds);
+	}
 	includeFollowers = GetPrivateProfileIntW(L"General", L"bIncludeFollowers", includeFollowers, ini.c_str()) != 0;
 	message = ReadString(L"Text", L"sMessage", message, ini);
 	messageNoName = ReadString(L"Text", L"sMessageNoName", messageNoName, ini);

@@ -9,6 +9,8 @@
 #	include "SelfTest.h"
 #	include "Settings.h"
 
+#	include <functional>
+
 namespace SelfTest
 {
 	namespace
@@ -100,6 +102,145 @@ namespace SelfTest
 			logs::info("Test: wait restored: setting {}, ini '{}'", Settings::Get().maxWaitSeconds, ReadIniWait());
 		}
 
+		// Finds an NPC the mod would take a station from, stands next to it and
+		// makes sure they're still on it at the moment of the click.
+		bool FindStation(RE::TESObjectREFR*& a_station, RE::Actor*& a_npc)
+		{
+			a_station = nullptr;
+			a_npc = nullptr;
+			for (int attempt = 0; attempt < 45 && !a_station; ++attempt) {
+				std::this_thread::sleep_for(2s);
+				OnMain([&] {
+					RE::ProcessLists::GetSingleton()->ForEachHighActor([&](RE::Actor* a_actor) {
+						const auto furniture = a_actor->GetOccupiedFurniture().get();
+						if (furniture && Handoff::IsCraftingStation(furniture.get()) && Handoff::IsEligible(a_actor)) {
+							a_station = furniture.get();
+							a_npc = a_actor;
+							return RE::BSContainer::ForEachResult::kStop;
+						}
+						return RE::BSContainer::ForEachResult::kContinue;
+					});
+					if (a_station) {
+						RE::PlayerCharacter::GetSingleton()->MoveTo(a_station);
+					}
+				});
+				if (a_station) {
+					std::this_thread::sleep_for(3s);
+					OnMain([&] {
+						if (Handoff::FindOccupant(a_station) != a_npc) {
+							logs::info("Test: {} left {:08X} before the click; looking again", a_npc->GetDisplayFullName(), a_station->GetFormID());
+							a_station = nullptr;
+						}
+					});
+				}
+			}
+			return a_station != nullptr;
+		}
+
+		// Closes the crafting menu and gets the player off the station.
+		void LeaveStation()
+		{
+			std::this_thread::sleep_for(2s);
+			OnMain([] {
+				if (MenuOpen()) {
+					RE::UIMessageQueue::GetSingleton()->AddMessage(RE::CraftingMenu::MENU_NAME, RE::UI_MESSAGE_TYPE::kHide, nullptr);
+				}
+			});
+			std::this_thread::sleep_for(2s);
+			OnMain([] {
+				const auto player = RE::PlayerCharacter::GetSingleton();
+				if (player->GetOccupiedFurniture().get()) {
+					player->StopInteractingQuick(true);
+				}
+			});
+			std::this_thread::sleep_for(2s);
+		}
+
+		// One click on a station an NPC is using, after `before` has set the scene.
+		// The scenario markers and RESULT lines are for the test report; the
+		// mod's own lines between them are what a player's log would hold.
+		void Scenario(const char* a_name, const std::function<void(RE::Actor*)>& a_before, const std::function<void()>& a_after, int a_listenMs = 8000)
+		{
+			RE::TESObjectREFR* station = nullptr;
+			RE::Actor*         npc = nullptr;
+			logs::info("Test: === SCENARIO {} ===", a_name);
+			if (!FindStation(station, npc)) {
+				logs::info("Test: RESULT {}: no NPC at a crafting station found", a_name);
+				logs::info("Test: === END {} ===", a_name);
+				return;
+			}
+			OnMain([&] {
+				if (a_before) {
+					a_before(npc);
+				}
+				logs::info("Test: player clicks {:08X} once", station->GetFormID());
+				station->ActivateRef(RE::PlayerCharacter::GetSingleton(), 0, nullptr, 1, false);
+			});
+			bool opened = false;
+			int  ms = 0;
+			for (; ms < a_listenMs && !opened; ms += 100) {
+				std::this_thread::sleep_for(100ms);
+				OnMain([&] { opened = MenuOpen(); });
+			}
+			std::this_thread::sleep_for(std::chrono::milliseconds(opened ? 3000 : 1000));
+			logs::info("Test: RESULT {}: crafting menu {} ({} ms after the click)", a_name, opened ? "OPENED" : "did NOT open", ms);
+			OnMain([&] {
+				if (a_after) {
+					a_after();
+				}
+			});
+			LeaveStation();
+			logs::info("Test: === END {} ===", a_name);
+		}
+
+		// A click on a crafting station nobody is using.
+		void FreeStationScenario()
+		{
+			logs::info("Test: === SCENARIO free-station ===");
+			RE::TESObjectREFR* station = nullptr;
+			OnMain([&] {
+				const auto player = RE::PlayerCharacter::GetSingleton();
+				RE::TES::GetSingleton()->ForEachReferenceInRange(player, 3000.0f, [&](RE::TESObjectREFR* a_ref) {
+					if (Handoff::IsCraftingStation(a_ref) && !Handoff::FindOccupant(a_ref) && a_ref->Is3DLoaded()) {
+						station = a_ref;
+						return RE::BSContainer::ForEachResult::kStop;
+					}
+					return RE::BSContainer::ForEachResult::kContinue;
+				});
+				if (station) {
+					player->MoveTo(station);
+				}
+			});
+			if (!station) {
+				logs::info("Test: RESULT free-station: no free crafting station found");
+			} else {
+				std::this_thread::sleep_for(2s);
+				OnMain([&] {
+					logs::info("Test: player clicks {:08X} once", station->GetFormID());
+					station->ActivateRef(RE::PlayerCharacter::GetSingleton(), 0, nullptr, 1, false);
+				});
+				std::this_thread::sleep_for(4s);
+				bool opened = false;
+				OnMain([&] { opened = MenuOpen(); });
+				logs::info("Test: RESULT free-station: crafting menu {}", opened ? "OPENED" : "did NOT open");
+				LeaveStation();
+			}
+			logs::info("Test: === END free-station ===");
+		}
+
+		// The cases a player is likely to report. Each runs once in one game session.
+		void Scenarios()
+		{
+			auto& cfg = Settings::Get();
+			Scenario("normal", nullptr, nullptr);
+			Scenario("mod-off", [&](RE::Actor*) { cfg.enabled = false; }, [&] { cfg.enabled = true; });
+			Scenario("short-wait", [&](RE::Actor*) { cfg.maxWaitSeconds = 1.0f; }, [&] { cfg.maxWaitSeconds = 10.0f; }, 12000);
+			Scenario("no-message-swap", [&](RE::Actor*) { Handoff::TestClearInUseTexts(); }, nullptr);
+			Scenario("npc-in-combat", [&](RE::Actor* a_npc) { a_npc->StartCombat(RE::PlayerCharacter::GetSingleton()); },
+				[&] {}, 4000);
+			FreeStationScenario();
+		}
+
 		void Run()
 		{
 			std::this_thread::sleep_for(5s);
@@ -116,81 +257,7 @@ namespace SelfTest
 			std::this_thread::sleep_for(15s);
 			CheckMcm();
 
-			RE::TESObjectREFR* station = nullptr;
-			RE::Actor*         npc = nullptr;
-			// Find an NPC the mod would take a station from, stand next to it, and
-			// make sure they're still on it at the moment of the click.
-			for (int attempt = 0; attempt < 45 && !station; ++attempt) {
-				std::this_thread::sleep_for(2s);
-				OnMain([&] {
-					RE::ProcessLists::GetSingleton()->ForEachHighActor([&](RE::Actor* a_actor) {
-						const auto furniture = a_actor->GetOccupiedFurniture().get();
-						if (furniture && Handoff::IsCraftingStation(furniture.get()) && Handoff::IsEligible(a_actor)) {
-							station = furniture.get();
-							npc = a_actor;
-							return RE::BSContainer::ForEachResult::kStop;
-						}
-						return RE::BSContainer::ForEachResult::kContinue;
-					});
-					if (station) {
-						RE::PlayerCharacter::GetSingleton()->MoveTo(station);
-					}
-				});
-				if (station) {
-					std::this_thread::sleep_for(3s);
-					OnMain([&] {
-						if (Handoff::FindOccupant(station) != npc) {
-							logs::info("Test: {} left {:08X} before the click; looking again", npc->GetDisplayFullName(), station->GetFormID());
-							station = nullptr;
-						}
-					});
-				}
-			}
-			if (!station) {
-				logs::info("Test: RESULT no NPC at a crafting station found");
-			} else {
-				OnMain([&] {
-					logs::info("Test: player clicks {:08X} once", station->GetFormID());
-					station->ActivateRef(RE::PlayerCharacter::GetSingleton(), 0, nullptr, 1, false);
-				});
-				bool opened = false;
-				int  ms = 0;
-				for (; ms < 15000 && !opened; ms += 100) {
-					std::this_thread::sleep_for(100ms);
-					OnMain([&] { opened = MenuOpen(); });
-				}
-				logs::info("Test: RESULT crafting menu {} ({} ms after the one click)", opened ? "OPENED" : "did NOT open", ms);
-				OnMain([&] { logs::info("Test: {} is {:.0f} units from the station", npc->GetDisplayFullName(), npc->GetPosition().GetDistance(station->GetPosition())); });
-
-				if (opened) {
-					std::this_thread::sleep_for(2s);
-					OnMain([] {
-						RE::UIMessageQueue::GetSingleton()->AddMessage(RE::CraftingMenu::MENU_NAME, RE::UI_MESSAGE_TYPE::kHide, nullptr);
-					});
-					std::this_thread::sleep_for(2s);
-					OnMain([] {
-						const auto player = RE::PlayerCharacter::GetSingleton();
-						const auto seat = player->GetOccupiedFurniture().get();
-						logs::info("Test: menu closed; player still at {:08X}", seat ? seat->GetFormID() : 0);
-						if (seat) {
-							player->StopInteractingQuick(true);  // what a real Escape would end in
-						}
-					});
-					// Watch whether the NPC walks straight back once the player leaves.
-					for (int s = 1; s <= 45; ++s) {
-						std::this_thread::sleep_for(1s);
-						OnMain([&] {
-							const auto occupant = Handoff::FindOccupant(station);
-							if (s % 5 == 0 || occupant) {
-								logs::info("Test: +{}s after leaving, station used by {}; {} is {:.0f} units away", s,
-									occupant ? (occupant->IsPlayerRef() ? "player" : occupant->GetDisplayFullName()) : "nobody",
-									npc->GetDisplayFullName(), npc->GetPosition().GetDistance(station->GetPosition()));
-							}
-						});
-					}
-					OnMain([&] { Handoff::LogActor("npc at end", npc); });
-				}
-			}
+			Scenarios();
 			logs::info("Test: done, quitting");
 			std::this_thread::sleep_for(1s);
 			OnMain([] { RE::Main::GetSingleton()->quitGame = true; });

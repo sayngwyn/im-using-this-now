@@ -10,6 +10,10 @@ namespace Handoff
 
 	RE::Actor* FindOccupant(RE::TESObjectREFR* a_furniture);
 	bool       IsCraftingStation(RE::TESObjectREFR* a_ref);
+	const char* WhyNot(RE::Actor* a_npc);     // why the mod leaves this NPC alone; nullptr if it takes over
 	bool       IsEligible(RE::Actor* a_npc);  // false: the mod leaves this NPC alone
 	void       LogActor(const char* a_label, RE::Actor* a_actor);
+#ifdef IUTN_SELFTEST
+	void       TestClearInUseTexts();  // test build only: pretend the game's texts weren't found
+#endif
 }
