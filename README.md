@@ -56,7 +56,7 @@ In MCM, open **I'm Using This Now**. Changes apply at once and hold for every sa
 
 ## Report a problem
 
-Post in the Nexus page's Bugs tab with your game version, what you saw, and this mod's log (`Documents\My Games\Skyrim Special Edition\SKSE\ImUsingThisNow.log`). Send it before you start the game again, because each launch replaces it. If the game crashed, also send the crash log from Crash Logger or Trainwreck on Skyrim. Logs are long, so link a paste site or bring them to [Discord](https://discord.com/invite/sayngwyn); they can show your Windows username.
+Post in the Nexus page's Bugs tab with your game version, what you saw, this mod's log and your load order. The log shows what the mod actually did, and the load order shows what else could be changing it. Log: `Documents\My Games\Skyrim Special Edition\SKSE\ImUsingThisNow.log`. Load order: `plugins.txt` in your MO2 profile folder, or in `%LOCALAPPDATA%\Skyrim Special Edition` with other mod managers; on MO2, please add `modlist.txt` from the same folder. Send the log before you start the game again, because each launch replaces it. If the game crashed, also send the crash log from Crash Logger or Trainwreck on Skyrim. Logs and load orders are long, so link a paste site or bring them to [Discord](https://discord.com/invite/sayngwyn); logs can show your Windows username.
 
 ---
 
